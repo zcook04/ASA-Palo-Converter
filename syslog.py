@@ -1,0 +1,1 @@
+#Converts asa syslog configuration to palo
