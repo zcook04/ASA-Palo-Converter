@@ -1,1 +1,6 @@
 /Configurations
+/Scripts
+/Include
+/Lib
+/.vscode
+pyvenv.cfg
