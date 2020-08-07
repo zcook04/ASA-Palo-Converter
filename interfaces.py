@@ -92,7 +92,6 @@ def palo_ipv6(interface, filename=converted_filename):
   Needs functionality added
   '''
   f = open(f'./Configurations/Converted/convertedInterface.txt', 'a')
-  f.write(f'\n\t\t\t\t\t\tlayer3 {{')
   f.write(f'\n\t\t\t\t\t\t\tipv6 {{')
   f.write(f'\n\t\t\t\t\t\t\t\tneighbor-discovery {{')
   f.write(f'\n\t\t\t\t\t\t\t\t\trouter-advertisement {{')
@@ -113,7 +112,7 @@ def palo_units_ipv6(interface, filename=converted_filename):
   f.write(f'\n\t\t\t\t\t\t\t\t\t\t\t\tenable no;')
   f.write(f'\n\t\t\t\t\t\t\t\t\t\t\t}}')
   f.write(f'\n\t\t\t\t\t\t\t\t\t\t}}')
-  f.write(f'\n\t\t\t\t\t\t\t\t\t}}')
+  f.write(f'\n\t\t\t\t\t\t\t\t\t}}\n')
   f.close()
 
 def palo_ndp_proxy(interface, filename=converted_filename):
@@ -231,7 +230,7 @@ def is_subInterface(interface, filename=converted_filename):
   f.close()
   if ('.' in interface[0]):
     old_content = contents.split("\n")
-    new_content = "\n".join(old_content[:-2])
+    new_content = "\n".join(old_content[:-3])
     f = open(filename, 'w+')
     for i in range(len(new_content)):
       f.write(new_content[i])
@@ -255,7 +254,7 @@ def palo_header(interface, filename=converted_filename):
   head_int_search = r'(interface )([a-zA-z]+)(\d\d?)([\/]\d\d?[\/]?\d?\d?)'
   header = re.search(head_int_search, interface)
   f = open(converted_filename, 'a')
-  f.write(f'\n\t\t\t\t\tethernet1{header.group(4)}')
+  f.write(f'\n\t\t\t\t\tethernet1{header.group(4)} {{')
   f.close()
   return
 
@@ -270,14 +269,15 @@ def palo_units_header(interface, filename=converted_filename):
 
 def palo_int_footer(filename=converted_filename):
   f = open(filename, 'a')
-  f.write('\t\t\t\t\t\t}')
-  f.write('\n\t\t\t\t\t}')
+  f.write('\n\t\t\t\t\t}') #root interface close
   f.close()
 
 def palo_units_footer(filename=converted_filename):
   f = open(converted_filename, 'a')
-  f.write('\n\t\t\t\t\t\t\t\t}')#headerclose
-  f.write('\n\t\t\t\t\t\t\t}')#unitclose
+  f.write('\n\t\t\t\t\t\t\t\t}')#units ethernet close
+  f.write('\n\t\t\t\t\t\t\t}')#units close
+  f.write('\n\t\t\t\t\t\t}')#layer3 close
+  f.write('\n\t\t\t\t\t}')#root interface close
   f.close()
   return
 
@@ -290,6 +290,23 @@ def palo_units(interface):
   palo_units_tag(interface)
   palo_units_footer()
 
+def palo_layer3(interface, filename=converted_filename):
+  '''
+  opens layer 3, adds configurable options, then closes.
+  takes interface and converted interface. appends the converted
+  filename and returns nothing
+  '''
+  f = open(converted_filename, 'a')
+  f.write('\n\t\t\t\t\t\tlayer3 {')
+  f.close()
+  palo_ipv6(interface)
+  palo_ndp_proxy(interface)
+  palo_ipv4(interface)
+  palo_lldp()
+  f = open(converted_filename, 'a')
+  f.write('\t\t\t\t\t\t}')
+  f.close()
+
 #Main Conversion Function -- Converts ASA interface config to Palo Interface Config.
 def palo_convert_interfaces(interfaces, filename=filename):
   for interface in interfaces:
@@ -298,10 +315,7 @@ def palo_convert_interfaces(interfaces, filename=filename):
       continue
     else:
       palo_header(interface[0])
-      palo_ipv6(interface)
-      palo_ndp_proxy(interface)
-      palo_ipv4(interface)
-      palo_lldp()
+      palo_layer3(interface)
       palo_int_footer()
 
 
