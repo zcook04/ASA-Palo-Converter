@@ -324,9 +324,9 @@ if __name__ == '__main__':
   interface_list = (find_interfaces (filename, regex))
   filtered_interfaces = filter_shutdown(interface_list)
   def convert_interfaces(filename, regex):
-    palo_device_parent()
+    palo_device_parent() #will be moved to main.py eventually
     palo_convert_interfaces(filtered_interfaces)
-    palo_device_parent_close()
+    palo_device_parent_close() #will be moved to main.py eventually
     return
 
   convert_interfaces(filename, regex)
