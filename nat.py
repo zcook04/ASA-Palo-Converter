@@ -75,6 +75,7 @@ class NatConversion():
           self.create_static_ip(line)
           self.close_static_ip()
           self.close_static_source_translation()
+          self.set_nat_rule_attributes(line)
           self.create_nat_rule_footer()
           self.increment_index()
       return
@@ -104,13 +105,48 @@ class NatConversion():
   def create_static_ip(self, line):
     with open(self.converted_filename, 'a') as f:
       f.write(f'\t\t\t\t\t\t\t\t\t\tstatic-ip {{\n')
-      print(line)
+      f.write(f'\t\t\t\t\t\t\t\t\t\t\t{self.static_translated_addr(line)}')
+      f.write(f'\t\t\t\t\t\t\t\t\t\t\tbi-directional {self.static_bi_directional(line)}')
     return
 
   def close_static_ip(self):
     with open(self.converted_filename, 'a') as f:
       f.write(f'\t\t\t\t\t\t\t\t\t\t}}\n')
     return
+
+  def static_translated_addr(self, line):
+    line_array = line.split(' ')
+    line_array_filtered = line_array[5:6]
+    print(line)
+    return f'translated-address {line_array_filtered[0]}\n'
+
+  def static_bi_directional(self, line):
+    return 'yes\n' #needs logic
+
+  def static_to_zone(self, line):
+    to_search = re.compile(r'(nat\s\()(\w*)([,])(\w*)')
+    to_zone = re.search(to_search, line).group(4)
+    with open(self.converted_filename, 'a') as f:
+      f.write(f'\t\t\t\t\t\t\t\t\tto {to_zone};\n')
+    return
+
+  def static_from_zone(self, line):
+    from_search = re.compile(r'(nat\s\()(\w*)([,])(\w*)')
+    from_zone = re.search(from_search, line).group(2)
+    with open(self.converted_filename, 'a') as f:
+      f.write(f'\t\t\t\t\t\t\t\t\tfrom {from_zone};\n')
+    return
+
+  def set_nat_rule_attributes(self, line):
+    with open(self.converted_filename, 'a') as f:
+      self.static_to_zone(line) #Needs logic
+      self.static_from_zone(line) #Needs logic
+      f.write(f'\t\t\t\t\t\t\t\t\tsource obj-172.30.40.11;\n') #Needs logic
+      f.write(f'\t\t\t\t\t\t\t\t\tdestination HQ_RDP_IN;\n') #Needs logic
+      f.write(f'\t\t\t\t\t\t\t\t\tservice any;\n') #Needs logic
+      f.write(f'\t\t\t\t\t\t\t\t\tto-interface ethernet1/1;\n') #Needs logic
+
+    return 
 
 if __name__ == '__main__':
   Convert = NatConversion()
