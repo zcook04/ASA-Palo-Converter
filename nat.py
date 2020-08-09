@@ -8,19 +8,38 @@ for other modules.
 import re
 from ciscoconfparse import CiscoConfParse
 
-filename = "./Configurations/ASA.txt"
-converted_filename = "./Configurations/Converted/convertedNat.txt"
+FILENAME = "./Configurations/ASA.txt"
+CONVERTED_FILENAME = "./Configurations/Converted/convertedNat.txt"
 STATIC_NAT_REGEX = r'(nat\s\()(\w*)([,])(\w*)(\)\s\w*\s)(static\s)'
 
 class NatConversion():
-  def __init__(self, filename=filename, converted_filename=converted_filename):
+  def __init__(self, FILENAME=FILENAME, CONVERTED_FILENAME=CONVERTED_FILENAME):
     self.nat_index = 1
-    self.filename = filename
-    self.converted_filename = converted_filename
-    self.static_nats = self.get_nat(filename, STATIC_NAT_REGEX)
+    self.FILENAME = FILENAME
+    self.CONVERTED_FILENAME = CONVERTED_FILENAME
+    self.static_nats = self.get_nat(FILENAME, STATIC_NAT_REGEX)
+
+  def palo_static_nat(self):
+    if (self.static_nats):
+      for s_nat in self.static_nats:
+        for line in s_nat:
+          self.create_nat_rule_header()
+          self.create_static_source_translation()
+          self.create_static_ip(line)
+          self.close_static_ip()
+          self.close_static_source_translation()
+          self.set_nat_rule_attributes(line)
+          self.create_nat_rule_footer()
+          self.increment_index()
+      return
+    else:
+      return
 
   def increment_index(self):
     self.nat_index = self.nat_index + 1
+  
+  def tabs(self, num_tabs):
+    return '\t'*num_tabs
 
   def convert_all_nat(self):
     self.create_file()
@@ -45,107 +64,100 @@ class NatConversion():
       parent.append(each_obj)
     return parent
 
-  def create_file(self, filename=converted_filename):
-    with open(filename, 'w'):
+  def create_file(self, FILENAME=CONVERTED_FILENAME):
+    with open(FILENAME, 'w'):
       return
 
   #CREATE HEADERS
   def create_nat_header(self):
-    with open(self.converted_filename, 'a') as f:
-      f.write('\t\t\t\t\t\tnat {\n')
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(6)}nat {{\n')
 
   def create_nat_footer(self):
-    with open(self.converted_filename, 'a') as f:
-      f.write('\t\t\t\t\t\t}\n')
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(6)}}}\n')
 
   def create_rules_header(self):
-    with open(self.converted_filename, 'a') as f:
-      f.write('\t\t\t\t\t\t\trules {\n')
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(7)}rules {{\n')
 
   def create_rules_footer(self):
-    with open(self.converted_filename, 'a') as f:
-      f.write('\t\t\t\t\t\t\t}\n')
-
-  def palo_static_nat(self):
-    if (self.static_nats):
-      for s_nat in self.static_nats:
-        for line in s_nat:
-          self.create_nat_rule_header()
-          self.create_static_source_translation()
-          self.create_static_ip(line)
-          self.close_static_ip()
-          self.close_static_source_translation()
-          self.set_nat_rule_attributes(line)
-          self.create_nat_rule_footer()
-          self.increment_index()
-      return
-    else:
-      return 
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(7)}}}\n') 
 
   def create_nat_rule_header(self):
-    with open(self.converted_filename, 'a') as f:
-      f.write(f'\t\t\t\t\t\t\t\tnat_{self.nat_index} {{\n')
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(8)}nat_{self.nat_index} {{\n')
     return
 
   def create_nat_rule_footer(self):
-    with open(self.converted_filename, 'a') as f:
-      f.write(f'\t\t\t\t\t\t\t\t}}\n')
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(8)}}}\n')
     return
 
   def create_static_source_translation(self):
-    with open(self.converted_filename, 'a') as f:
-      f.write(f'\t\t\t\t\t\t\t\t\tsource-translation {{\n')
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(9)}source-translation {{\n')
     return
 
   def close_static_source_translation(self):
-    with open(self.converted_filename, 'a') as f:
-      f.write(f'\t\t\t\t\t\t\t\t\t}}\n')
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(9)}}}\n')
     return
 
   def create_static_ip(self, line):
-    with open(self.converted_filename, 'a') as f:
-      f.write(f'\t\t\t\t\t\t\t\t\t\tstatic-ip {{\n')
-      f.write(f'\t\t\t\t\t\t\t\t\t\t\t{self.static_translated_addr(line)}')
-      f.write(f'\t\t\t\t\t\t\t\t\t\t\tbi-directional {self.static_bi_directional(line)}')
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(10)}static-ip {{\n')
+      f.write(f'{self.tabs(11)}{self.static_translated_addr(line)}')
+      f.write(f'{self.tabs(11)}bi-directional {self.static_bi_directional(line)}')
     return
 
   def close_static_ip(self):
-    with open(self.converted_filename, 'a') as f:
-      f.write(f'\t\t\t\t\t\t\t\t\t\t}}\n')
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(10)}}}\n')
     return
 
   def static_translated_addr(self, line):
-    line_array = line.split(' ')
-    line_array_filtered = line_array[5:6]
-    print(line)
-    return f'translated-address {line_array_filtered[0]}\n'
+    if(self.check_static_ip_opts(line)):
+      line_array = line.split(' ')
+      print(line_array)
+      return f'translated-address {line_array[7]};\n'
+    else:
+      line_array = line.split(' ')
+      print(line)
+      return f'translated-address {line_array[5]};\n'
+
+  def check_static_ip_opts(self, line):
+    if('static tcp' in line or 'static udp' in line or 'static ip' in line):
+      return True
+    else:
+      return False
 
   def static_bi_directional(self, line):
-    return 'yes\n' #needs logic
+    return 'yes;\n' #needs logic
 
   def static_to_zone(self, line):
     to_search = re.compile(r'(nat\s\()(\w*)([,])(\w*)')
     to_zone = re.search(to_search, line).group(4)
-    with open(self.converted_filename, 'a') as f:
-      f.write(f'\t\t\t\t\t\t\t\t\tto {to_zone};\n')
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(9)}to {to_zone};\n')
     return
 
   def static_from_zone(self, line):
     from_search = re.compile(r'(nat\s\()(\w*)([,])(\w*)')
     from_zone = re.search(from_search, line).group(2)
-    with open(self.converted_filename, 'a') as f:
-      f.write(f'\t\t\t\t\t\t\t\t\tfrom {from_zone};\n')
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(9)}from {from_zone};\n')
     return
 
   def set_nat_rule_attributes(self, line):
-    with open(self.converted_filename, 'a') as f:
-      self.static_to_zone(line) #Needs logic
-      self.static_from_zone(line) #Needs logic
-      f.write(f'\t\t\t\t\t\t\t\t\tsource obj-172.30.40.11;\n') #Needs logic
-      f.write(f'\t\t\t\t\t\t\t\t\tdestination HQ_RDP_IN;\n') #Needs logic
-      f.write(f'\t\t\t\t\t\t\t\t\tservice any;\n') #Needs logic
-      f.write(f'\t\t\t\t\t\t\t\t\tto-interface ethernet1/1;\n') #Needs logic
-
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      self.static_to_zone(line)
+      self.static_from_zone(line)
+      f.write(f'{self.tabs(9)}source obj-172.30.40.11;\n') #Needs logic
+      f.write(f'{self.tabs(9)}destination HQ_RDP_IN;\n') #Needs logic
+      f.write(f'{self.tabs(9)}service any;\n') #Needs logic
+      f.write(f'{self.tabs(9)}to-interface ethernet1/1;\n') #Needs logic
     return 
 
 if __name__ == '__main__':
