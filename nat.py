@@ -50,14 +50,15 @@ class NatConversion():
     self.create_rules_footer()
     self.create_nat_footer()
 
-  def get_nat (self, file, filter):
+  def get_nat (self, asa_conf, search_string):
     '''
-    Returns interfaces as parent objects from ASA config.
-    Takes two arguments(ASACONFIG, SEARCHSTRING).
+    Returns asa config as parent/child config objects.  Filter is
+    used to select portions of the configuration. That match the
+    filter string.  Takes two arguments (ASACONFIG, SEARCHSTRING).
     '''
     parent = []
-    parse = CiscoConfParse(file)
-    for obj in parse.find_objects(filter):
+    parse = CiscoConfParse(asa_conf)
+    for obj in parse.find_objects(search_string):
       each_obj = []
       each_obj.append(obj.text)
       for each in obj.all_children:
@@ -179,7 +180,15 @@ class NatConversion():
     return
 
   def static_to_interface(self, line):
-    pass
+    search_int_name = r'(nameif\s)(\w*)'
+    search_line_name = r'(nat\s)(\(\w*[,])(\w*)'
+    for intf in filtered_interfaces:
+      s_intf = ' '.join(intf)
+      int_name = re.search(search_int_name, s_intf)
+      line_name = re.search(search_line_name, line)
+      if(int_name.group(2) == line_name.group(3)):
+        return(int_name.group(2))
+      
 
   def set_nat_rule_attributes(self, line):
     with open(self.CONVERTED_FILENAME, 'a') as f:
@@ -196,7 +205,7 @@ class NatConversion():
       else:
         f.write(f'{self.tabs(9)}service any;\n')
       self.static_to_interface(line)
-      f.write(f'{self.tabs(9)}to-interface {self.static_to_interface(line)};\n') #Needs logic
+      f.write(f'{self.tabs(9)}to-interface {self.static_to_interface(line)};\n')
     return 
 
 if __name__ == '__main__':
