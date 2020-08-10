@@ -67,25 +67,14 @@ def filter_shutdown(interface_list):
 
 #Create the parent Palo container for interfaces    
 def palo_device_parent(filename=converted_filename, domain_name=domain_name):
-  f = open(filename, 'w')
-  f.write('config {\n')
-  f.write('\tdevices {\n')
-  if domain_name:
-    f.write(f'\t\t{domain_name} {{\n')
-  else:
-    f.write(f'\t\tlocalhost.localdomain {{\n')
-  f.write('\t\t\tinterface {\n')
-  f.write('\t\t\t\tethernet {')
-  f.close()
+  with open(filename, 'w') as f:
+    f.write('\t\t\tinterface {\n')
+    f.write('\t\t\t\tethernet {')
 
 def palo_device_parent_close(filename=converted_filename):
-  f = open(filename, 'a')
-  f.write('\n\t\t\t\t}')
-  f.write('\n\t\t\t}')
-  f.write('\n\t\t}')
-  f.write('\n\t}')
-  f.write('\n}')
-  f.close()
+  with open(filename, 'a') as f:
+    f.write('\n\t\t\t\t}')
+    f.write('\n\t\t\t}')
 
 def palo_ipv6(interface, filename=converted_filename):
   '''
@@ -112,7 +101,7 @@ def palo_units_ipv6(interface, filename=converted_filename):
   f.write(f'\n\t\t\t\t\t\t\t\t\t\t\t\tenable no;')
   f.write(f'\n\t\t\t\t\t\t\t\t\t\t\t}}')
   f.write(f'\n\t\t\t\t\t\t\t\t\t\t}}')
-  f.write(f'\n\t\t\t\t\t\t\t\t\t}}\n')
+  f.write(f'\n\t\t\t\t\t\t\t\t\t}}')
   f.close()
 
 def palo_ndp_proxy(interface, filename=converted_filename):
@@ -319,7 +308,7 @@ def palo_convert_interfaces(interfaces, filename=filename):
       palo_int_footer()
 
 interface_list = (find_interfaces (filename, regex))
-filtered_interfaces = filter_shutdown(interface_list)
+filtered_interfaces = filter_shutdown(interface_list) #Required by nat.py
 #Main build loop.
 if __name__ == '__main__':
 
