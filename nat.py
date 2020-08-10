@@ -7,6 +7,7 @@ for other modules.
 
 import re
 from ciscoconfparse import CiscoConfParse
+from interfaces import filtered_interfaces
 
 FILENAME = "./Configurations/ASA.txt"
 CONVERTED_FILENAME = "./Configurations/Converted/convertedNat.txt"
@@ -118,23 +119,44 @@ class NatConversion():
     return
 
   def static_translated_addr(self, line):
-    if(self.check_static_ip_opts(line)):
       line_array = line.split(' ')
-      print(line_array)
-      return f'translated-address {line_array[7]};\n'
-    else:
-      line_array = line.split(' ')
-      print(line)
       return f'translated-address {line_array[5]};\n'
 
-  def check_static_ip_opts(self, line):
-    if('static tcp' in line or 'static udp' in line or 'static ip' in line):
-      return True
-    else:
-      return False
+  def get_static_ip_opts(self, line):
+    options = {}
+    line_size_no_options = 6
+    line_array = line.split(' ')
+    if (len(line_array) <= line_size_no_options):
+      return options
+    if ('destination' in line_array):
+      destination = line_array.index('destination')
+      options['destination-orig'] = line_array[destination+2]
+      options['destination-trans'] = line_array[destination+3]
+    if ('description' in line_array):
+      description = line_array.index('description')
+      options['description'] = ' '.join(line_array[description+1:])
+    if ('inactive' in line_array):
+      options['disabled'] = 'yes;'
+    if ('service' in line_array):
+      service = line_array.index('service')
+      options['service-orig'] = line_array[service+1]
+      options['service-trans'] = line_array[service+2]
+    if ('no-proxy-arp' in line_array):
+      options['no-proxy-arp'] = True
+    if ('unidirectional' in line_array):
+      options['unidirectional'] = True
+    if ('dns' in line_array):
+      options['dns'] = True
+    if ('route-lookup' in line_array):
+      options['route-lookup'] = True
+    return options
+
 
   def static_bi_directional(self, line):
-    return 'yes;\n' #needs logic
+    options = self.get_static_ip_opts(line)
+    if (options.get('unidirectional') != None):
+      return 'no;\n' #needs logic
+    return 'yes;\n'
 
   def static_to_zone(self, line):
     to_search = re.compile(r'(nat\s\()(\w*)([,])(\w*)')
@@ -150,14 +172,31 @@ class NatConversion():
       f.write(f'{self.tabs(9)}from {from_zone};\n')
     return
 
+  def static_source_obj(self, line):
+    line_array = line.split(' ')
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(9)}source {line_array[4]};\n')
+    return
+
+  def static_to_interface(self, line):
+    pass
+
   def set_nat_rule_attributes(self, line):
     with open(self.CONVERTED_FILENAME, 'a') as f:
+      options = self.get_static_ip_opts(line)
       self.static_to_zone(line)
       self.static_from_zone(line)
-      f.write(f'{self.tabs(9)}source obj-172.30.40.11;\n') #Needs logic
-      f.write(f'{self.tabs(9)}destination HQ_RDP_IN;\n') #Needs logic
-      f.write(f'{self.tabs(9)}service any;\n') #Needs logic
-      f.write(f'{self.tabs(9)}to-interface ethernet1/1;\n') #Needs logic
+      self.static_source_obj(line)
+      if ('destination-trans' in options.keys()):
+        f.write(f'{self.tabs(9)}destination {options["destination-trans"]}\n')
+      else:
+        f.write(f'{self.tabs(9)}destination any;\n')
+      if ('service' in options.keys()):#Needs reworked
+        f.write(f'{self.tabs(9)}service {options["service-orig"]}\n') 
+      else:
+        f.write(f'{self.tabs(9)}service any;\n')
+      self.static_to_interface(line)
+      f.write(f'{self.tabs(9)}to-interface {self.static_to_interface(line)};\n') #Needs logic
     return 
 
 if __name__ == '__main__':

@@ -318,11 +318,11 @@ def palo_convert_interfaces(interfaces, filename=filename):
       palo_layer3(interface)
       palo_int_footer()
 
-
+interface_list = (find_interfaces (filename, regex))
+filtered_interfaces = filter_shutdown(interface_list)
 #Main build loop.
 if __name__ == '__main__':
-  interface_list = (find_interfaces (filename, regex))
-  filtered_interfaces = filter_shutdown(interface_list)
+
   def convert_interfaces(filename, regex):
     palo_device_parent() #will be moved to main.py eventually
     palo_convert_interfaces(filtered_interfaces)
