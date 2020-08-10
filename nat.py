@@ -7,7 +7,8 @@ for other modules.
 
 import re
 from ciscoconfparse import CiscoConfParse
-from interfaces import filtered_interfaces
+from interfaces import filtered_interfaces #For to-interface mappings
+from objects import Network #For object nat
 
 FILENAME = "./Configurations/ASA.txt"
 CONVERTED_FILENAME = "./Configurations/Converted/convertedNat.txt"
