@@ -51,19 +51,19 @@ class Network(Objects):
   def __init__(self):
     super().__init__(FILENAME=FILENAME, search_text=SEARCH_NETWORK_O)
 
-  def net_host_objs(self):
+  def get_host_objs(self):
     filter = r'(host\s\d*[.]\d*[.]\d*[.]\d*)'
     return self.filter_obj_types(filter)
 
-  def net_subnet_objs(self):
+  def get_subnet_objs(self):
     filter = r'(subnet\s\d*[.]\d*[.]\d*[.]\d*)'
     return self.filter_obj_types(filter)
 
-  def net_fqdn_objs(self):
+  def get_fqdn_objs(self):
     filter = r'(fqdn\s\w+)'
     return self.filter_obj_types(filter)
 
-  def net_nat_objs(self):
+  def get_nat_objs(self):
     filter = r'(nat\s)(\()(\w+)[,](\w+)'
     return self.filter_obj_types(filter)
 
@@ -89,6 +89,6 @@ if __name__ == '__main__':
   ServiceGroupObjects = ServiceGroup()
 
   #testing ------BELOW---------
-  network_hosts = NetworkObjects.net_host_objs()
-  network_subnets = NetworkObjects.net_subnet_objs()
+  network_hosts = NetworkObjects.get_host_objs()
+  network_subnets = NetworkObjects.get_subnet_objs()
 
