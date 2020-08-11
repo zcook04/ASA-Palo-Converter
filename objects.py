@@ -91,4 +91,5 @@ if __name__ == '__main__':
   #testing ------BELOW---------
   network_hosts = NetworkObjects.get_host_objs()
   network_subnets = NetworkObjects.get_subnet_objs()
-
+  network_nat = NetworkObjects.get_nat_objs()
+  print(network_nat)
