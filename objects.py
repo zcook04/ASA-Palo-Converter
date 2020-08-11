@@ -9,9 +9,8 @@ for that specific module.  Ie nat.py/access_policy.py will also require ect..
 import re
 from ciscoconfparse import CiscoConfParse
 
-#temporary.  filename / converted filename will be passed as arguements from main.py once created
-#can keepp file/converted filename as defaults but will need to create a function that will
-#make the required dirs.
+#FILENAME will be a argument passed from main.py once it is created.  FILENAME set statically for testing only.
+#CONVERTED_FILENAME will likely follow suit but may default to a static path/string.
 FILENAME = "./Configurations/ASA.txt"
 CONVERTED_FILENAME = "./Configurations/Converted/convertedObjects.txt"
 
