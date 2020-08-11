@@ -10,9 +10,13 @@ from ciscoconfparse import CiscoConfParse
 from interfaces import filtered_interfaces #For to-interface mappings
 from objects import Network #For object nat
 
+#FILENAME will be a argument passed from main.py once it is created.  FILENAME set statically for testing only.
+#CONVERTED_FILENAME will likely follow suit but may default to a static path/string.
 FILENAME = "./Configurations/ASA.txt"
 CONVERTED_FILENAME = "./Configurations/Converted/convertedNat.txt"
+
 STATIC_NAT_REGEX = r'(nat\s\()(\w*)([,])(\w*)(\)\s\w*\s)(static\s)'
+STATIC_AFTER_AUTO = r'(nat\s\()(\w*)([,])(\w*)\)\s(after-auto)'
 
 class NatConversion():
   def __init__(self, FILENAME=FILENAME, CONVERTED_FILENAME=CONVERTED_FILENAME):
@@ -20,6 +24,7 @@ class NatConversion():
     self.FILENAME = FILENAME
     self.CONVERTED_FILENAME = CONVERTED_FILENAME
     self.static_nats = self.get_nat(FILENAME, STATIC_NAT_REGEX)
+    self.auto_source_nats = self.get_nat(FILENAME, STATIC_AFTER_AUTO)
 
   def palo_static_nat(self):
     if (self.static_nats):
@@ -48,6 +53,23 @@ class NatConversion():
       self.set_obj_attributes(attr)
       self.create_nat_rule_footer()
       self.increment_index()
+
+  def palo_after_auto_nat(self):
+    if (self.static_nats):
+      for s_nat in self.auto_source_nats:
+        for line in s_nat:
+          print(line)
+          self.create_nat_rule_header()
+          self.create_nat_source_translation()
+          self.create_static_ip(line)
+          self.close_static_ip()
+          self.close_nat_source_translation()
+          self.set_nat_rule_attributes(line)
+          self.create_nat_rule_footer()
+          self.increment_index()
+      return
+    else:
+      return
         
 
   def increment_index(self):
@@ -62,6 +84,7 @@ class NatConversion():
     self.create_rules_header()
     self.palo_static_nat()
     self.palo_obj_nat()
+    self.palo_after_auto_nat()
     self.create_rules_footer()
     self.create_nat_footer()
 
@@ -135,8 +158,9 @@ class NatConversion():
     return
 
   def static_translated_addr(self, line):
-      line_array = line.split(' ')
-      return f'translated-address {line_array[5]};\n'
+    line_array = line.split(' ')
+    return f'translated-address {line_array[5]};\n'
+        
 
   def get_static_ip_opts(self, line):
     options = {}
@@ -191,7 +215,10 @@ class NatConversion():
   def static_source_obj(self, line):
     line_array = line.split(' ')
     with open(self.CONVERTED_FILENAME, 'a') as f:
-      f.write(f'{self.tabs(9)}source {line_array[4]};\n')
+      if ('after-auto' in line_array):
+        f.write(f'{self.tabs(9)}source {line_array[6]};\n')
+      else:
+        f.write(f'{self.tabs(9)}source {line_array[4]};\n')
     return
 
   def static_to_interface(self, line):
@@ -260,7 +287,7 @@ class NatConversion():
       f.write(f'{self.tabs(9)}from {szone};\n')
       f.write(f'{self.tabs(9)}source {source};\n')
       f.write(f'{self.tabs(9)}destination any;\n')
-      f.write(f'{self.tabs(9)}service any;\n')
+      f.write(f'{self.tabs(9)}service any;\n') #needs logic function
       f.write(f'{self.tabs(9)}to-interface {self.obj_to_interface(dzone)};\n')
     return
 
