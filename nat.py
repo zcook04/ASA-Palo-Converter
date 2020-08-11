@@ -58,7 +58,6 @@ class NatConversion():
     if (self.static_nats):
       for s_nat in self.auto_source_nats:
         for line in s_nat:
-          print(line)
           self.create_nat_rule_header()
           self.create_nat_source_translation()
           self.create_static_ip(line)
@@ -277,7 +276,6 @@ class NatConversion():
     obj_nat_attr['bi_directional'] = False #Logic function needed
     if (type((re.search(r'(pat-pool\s)([a-zA-Z\-_.\d]*)', obj_nat[1]))) is not type(None)):
       obj_nat_attr['pat-pool'] = re.search(r'(pat-pool\s)([a-zA-Z\-_.\d]*)', obj_nat[1]).group(2)
-      print(obj_nat_attr['pat-pool'])
     return obj_nat_attr
 
   def set_obj_attributes(self, attr):
