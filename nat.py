@@ -26,16 +26,29 @@ class NatConversion():
       for s_nat in self.static_nats:
         for line in s_nat:
           self.create_nat_rule_header()
-          self.create_static_source_translation()
+          self.create_nat_source_translation()
           self.create_static_ip(line)
           self.close_static_ip()
-          self.close_static_source_translation()
+          self.close_nat_source_translation()
           self.set_nat_rule_attributes(line)
           self.create_nat_rule_footer()
           self.increment_index()
       return
     else:
       return
+
+  def palo_obj_nat(self):
+    for o_nat in Network().get_nat_objs():
+      attr = self.get_obj_attributes(o_nat)
+      self.create_nat_rule_header()
+      self.create_nat_source_translation()
+      self.create_source_param(attr)
+      self.close_source_param()
+      self.close_nat_source_translation()
+      self.set_obj_attributes(attr)
+      self.create_nat_rule_footer()
+      self.increment_index()
+        
 
   def increment_index(self):
     self.nat_index = self.nat_index + 1
@@ -48,6 +61,7 @@ class NatConversion():
     self.create_nat_header()
     self.create_rules_header()
     self.palo_static_nat()
+    self.palo_obj_nat()
     self.create_rules_footer()
     self.create_nat_footer()
 
@@ -98,12 +112,12 @@ class NatConversion():
       f.write(f'{self.tabs(8)}}}\n')
     return
 
-  def create_static_source_translation(self):
+  def create_nat_source_translation(self):
     with open(self.CONVERTED_FILENAME, 'a') as f:
       f.write(f'{self.tabs(9)}source-translation {{\n')
     return
 
-  def close_static_source_translation(self):
+  def close_nat_source_translation(self):
     with open(self.CONVERTED_FILENAME, 'a') as f:
       f.write(f'{self.tabs(9)}}}\n')
     return
@@ -187,8 +201,9 @@ class NatConversion():
       s_intf = ' '.join(intf)
       int_name = re.search(search_int_name, s_intf)
       line_name = re.search(search_line_name, line)
+      int_num = self.get_int_num(intf)
       if(int_name.group(2) == line_name.group(3)):
-        return(int_name.group(2))
+        return f'interface1/{int_num}'
       
 
   def set_nat_rule_attributes(self, line):
@@ -207,7 +222,66 @@ class NatConversion():
         f.write(f'{self.tabs(9)}service any;\n')
       self.static_to_interface(line)
       f.write(f'{self.tabs(9)}to-interface {self.static_to_interface(line)};\n')
-    return 
+    return
+
+  def create_source_param(self, attr):
+    ip_type, translated, bi_directional = attr['ip_type'], attr['translated'], attr['bi_directional']
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(10)}{ip_type} {{\n')
+      f.write(f'{self.tabs(11)}translated-address {translated}\n')
+      if (bi_directional):
+        f.write(f'{self.tabs(11)}bi-directional yes;')
+
+  def close_source_param(self):
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(10)}}}\n')
+    return
+
+  def get_obj_attributes(self, obj_nat):
+    obj_nat_attr = {}
+    obj_nat_attr['source'] = re.search(r'(object\s)(network)([\s])(.*)', obj_nat[0]).group(4)
+    obj_nat_attr['szone'] = re.search(r'(nat \()([\w\-_\d]*)[,]([a-zA-Z\d_\-]*)\)\s([a-zA-Z\d_\-]*)\s([a-zA-Z\d_\-]*)', obj_nat[1]).group(2)
+    obj_nat_attr['dzone'] = re.search(r'(nat \()([\w\-_\d]*)[,]([a-zA-Z\d_\-]*)\)\s([a-zA-Z\d_\-]*)\s([a-zA-Z\d_\-]*)', obj_nat[1]).group(3)
+    if (re.search(r'(nat \()([\w\-_\d]*)[,]([a-zA-Z\d_\-]*)\)\s([a-zA-Z\d_\-]*)\s([a-zA-Z\d_\-]*)', obj_nat[1]).group(4) == 'dynamic'):
+      obj_nat_attr['ip_type'] = 'dynamic-ip-and-port'
+    else:
+      obj_nat_attr['ip_type'] = 'static'
+    obj_nat_attr['translated'] = re.search(r'(nat \()([\w\-_\d]*)[,]([a-zA-Z\d_\-]*)\)\s([a-zA-Z\d_\-]*)\s([a-zA-Z\d_\-.]*)', obj_nat[1]).group(5)
+    obj_nat_attr['bi_directional'] = False #Logic function needed
+    if (type((re.search(r'(pat-pool\s)([a-zA-Z\-_.\d]*)', obj_nat[1]))) is not type(None)):
+      obj_nat_attr['pat-pool'] = re.search(r'(pat-pool\s)([a-zA-Z\-_.\d]*)', obj_nat[1]).group(2)
+      print(obj_nat_attr['pat-pool'])
+    return obj_nat_attr
+
+  def set_obj_attributes(self, attr):
+    with open(self.CONVERTED_FILENAME, 'a') as f:
+      dzone, szone, source = attr['dzone'], attr['szone'], attr['source']
+      f.write(f'{self.tabs(9)}to {dzone};\n')
+      f.write(f'{self.tabs(9)}from {szone};\n')
+      f.write(f'{self.tabs(9)}source {source};\n')
+      f.write(f'{self.tabs(9)}destination any;\n')
+      f.write(f'{self.tabs(9)}service any;\n')
+      f.write(f'{self.tabs(9)}to-interface {self.obj_to_interface(dzone)};\n')
+    return
+
+  def obj_to_interface(self, dzone):
+    search_int_name = r'(nameif\s)(\w*)'
+    for intf in filtered_interfaces:
+      s_intf = ' '.join(intf)
+      int_name = re.search(search_int_name, s_intf)
+      int_num = self.get_int_num(intf)
+      if(int_name.group(2) == dzone):
+        return f'ethernet1/{int_num}'
+
+  def get_int_num(self, intf):
+    search_int_num = r'(interface\s)([\w\d]*[\/])([\d.]*)(\/)?([\d.]*)?'
+    int_number = re.search(search_int_num, intf[0])
+    if (int_number.group(5) != ''):
+      return int_number.group(5)
+    else:
+      return int_number.group(3)
+      
+
 
 if __name__ == '__main__':
   Convert = NatConversion()
