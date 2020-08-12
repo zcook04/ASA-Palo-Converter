@@ -70,13 +70,6 @@ class NatConversion():
     else:
       return
         
-
-  def increment_index(self):
-    self.nat_index = self.nat_index + 1
-  
-  def tabs(self, num_tabs):
-    return '\t'*num_tabs
-
   def convert_all_nat(self):
     self.create_file()
     self.create_nat_header()
@@ -86,6 +79,12 @@ class NatConversion():
     self.palo_after_auto_nat()
     self.create_rules_footer()
     self.create_nat_footer()
+
+  def increment_index(self):
+    self.nat_index = self.nat_index + 1
+  
+  def tabs(self, num_tabs):
+    return '\t'*num_tabs
 
   def get_nat (self, asa_conf, search_string):
     '''
@@ -247,7 +246,8 @@ class NatConversion():
       else:
         f.write(f'{self.tabs(9)}service any;\n')
       self.static_to_interface(line)
-      f.write(f'{self.tabs(9)}to-interface {self.static_to_interface(line)};\n')
+      if(self.static_to_interface(line) != None):
+        f.write(f'{self.tabs(9)}to-interface {self.static_to_interface(line)};\n')
     return
 
   def create_source_param(self, attr):
@@ -286,7 +286,8 @@ class NatConversion():
       f.write(f'{self.tabs(9)}source {source};\n')
       f.write(f'{self.tabs(9)}destination any;\n')
       f.write(f'{self.tabs(9)}service any;\n') #needs logic function
-      f.write(f'{self.tabs(9)}to-interface {self.obj_to_interface(dzone)};\n')
+      if(self.obj_to_interface(dzone) != None):
+        f.write(f'{self.tabs(9)}to-interface {self.obj_to_interface(dzone)};\n')
     return
 
   def obj_to_interface(self, dzone):
