@@ -163,7 +163,7 @@ class Network(Objects):
 
   def get_fqdn_attr(self, fqdn):
     attr = {}
-    attr['obj_fqdn_name'] = re.search('object network (\S*)', ' '.join(fqdn)).group(1)
+    attr['obj_fqdn_name'] = re.search(r'object network (\S*)', ' '.join(fqdn)).group(1)
     attr['obj_fqdn_val'] = re.search(r'( fqdn (v4 |v5 )?)(\S*)', ' '.join(fqdn)).group(3)
     if(('description' in ' '.join(fqdn)) and (re.search(r' description ([\S ]*)', ' '.join(fqdn)) != None)):
       attr['obj_fqdn_desc'] = re.search(r' description ([\S ]*)', ' '.join(fqdn)).group(1)
