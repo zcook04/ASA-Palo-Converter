@@ -1,0 +1,280 @@
+            domain_tcp {
+              protocol {
+                tcp {
+                  port 53;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            domain {
+              protocol {
+                udp {
+                  port 53;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            sip_tcp {
+              protocol {
+                tcp {
+                  port 5060;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            sip {
+              protocol {
+                udp {
+                  port 5060;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            ftp {
+              protocol {
+                tcp {
+                  port 21;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            ssh {
+              protocol {
+                tcp {
+                  port 22;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            telnet {
+              protocol {
+                tcp {
+                  port 23;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            smtp {
+              protocol {
+                tcp {
+                  port 25;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            www_tcp {
+              protocol {
+                tcp {
+                  port 80;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            www {
+              protocol {
+                udp {
+                  port 80;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            pop3 {
+              protocol {
+                tcp {
+                  port 110;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            netbios-ssn {
+              protocol {
+                tcp {
+                  port 139;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            imap4 {
+              protocol {
+                tcp {
+                  port 143;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            ldap {
+              protocol {
+                tcp {
+                  port 389;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            https {
+              protocol {
+                tcp {
+                  port 443;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            lpd {
+              protocol {
+                tcp {
+                  port 515;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            ldaps {
+              protocol {
+                tcp {
+                  port 636;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            sqlnet {
+              protocol {
+                tcp {
+                  port 1521;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            h323 {
+              protocol {
+                tcp {
+                  port 1720;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            bootps {
+              protocol {
+                udp {
+                  port 67;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            tftp {
+              protocol {
+                udp {
+                  port 69;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            ntp {
+              protocol {
+                udp {
+                  port 123;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            netbios-ns {
+              protocol {
+                udp {
+                  port 137;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            netbios-dgm {
+              protocol {
+                udp {
+                  port 138;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            snmp {
+              protocol {
+                udp {
+                  port 161;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            snmptrap {
+              protocol {
+                udp {
+                  port 162;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            isakmp {
+              protocol {
+                udp {
+                  port 500;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
+            syslog {
+              protocol {
+                udp {
+                  port 514;
+                  override {
+                    no;
+                  }
+                }
+              }
+            }
