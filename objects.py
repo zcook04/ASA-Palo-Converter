@@ -213,7 +213,7 @@ class NetworkGroup(Objects):
 
   def close_address_g_header(self):
     with open(CONVERTED_FILENAME, 'a') as f:
-      f.write(f'{self.tabs(5)}}}')
+      f.write(f'{self.tabs(5)}}}\n')
 
   def get_group_members(self, net_group):
     hosts = r'(network-object host )(\S*)'
@@ -251,12 +251,93 @@ class NetworkGroup(Objects):
 class Service(Objects):
   def __init__(self):
     super().__init__(FILENAME=FILENAME, search_text=SEARCH_SERVICE_O)
-    pass
+
+  def convert_service_objs(self):
+    self.create_header()
+    self.append_defaults()
+    for service in self.objects:
+      service_attr = self.get_service_attributes(service)
+      self.create_service(service_attr['name'])
+      self.set_protocol_attr(service_attr)
+      self.close_service()
+    self.close_header()
+
+  def get_service_attributes(self, service):
+    service_attr = {}
+    service_string = ' '.join(service)
+    service_attr['name'] = re.search(r'object service (\S*)', service_string).group(1)
+    service_attr['protocol'] = re.search(r'service\s(\S*)\s(source|destination)', service_string).group(1)
+    if(type(re.search(r'destination\s(range\s)(\S*)\s(\S*)', service_string)) != type(None)):
+      dst_start = re.search(r'destination\s(range\s)(\S*)\s(\S*)', service_string).group(2)
+      dst_end = re.search(r'destination\s(range\s)(\S*)\s(\S*)', service_string).group(3)
+      service_attr['destination'] = f'{dst_start}-{dst_end}'
+    elif(type(re.search(r'destination\s(eq\s)(\S*)', service_string)) != type(None)):
+      service_attr['destination'] = re.search(r'destination\s(eq\s)(\S*)', service_string).group(2)
+    else:
+      service_attr['destination'] = False
+    if(type(re.search(r'source\s(range\s)(\S*)\s(\S*)', service_string)) != type(None)):
+      source_start = re.search(r'source\s(range\s)(\S*)\s(\S*)', service_string).group(2)
+      source_end = re.search(r'source\s(range\s)(\S*)\s(\S*)', service_string).group(3)
+      service_attr['source'] = f'{source_start}-{source_end}'
+    elif(type(re.search(r'source\s(eq\s)(\S*)', service_string)) != type(None)):
+      service_attr['source'] = re.search(r'source\s(eq\s)(\S*)', service_string).group(2)
+    else:
+      service_attr['source'] = False
+    return service_attr
+
+  def set_protocol_attr(self, attr):
+    with open(CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(8)}{attr["protocol"]} {{\n')
+      if(attr["destination"]):
+        f.write(f'{self.tabs(9)}port {attr["destination"]};\n')
+      if(attr["source"]):
+        f.write(f'{self.tabs(9)}source-port {attr["source"]};\n')
+    self.set_override()
+    with open(CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(8)}}}\n')
+
+  def append_defaults(self, default_file='./Defaults/service_obj.txt'):
+    '''
+    Appends service-object defaults (ie www https)to account for those objects referenced in ASA 
+    that aren't explicitly called out in the configuration.
+    '''
+    try:
+      with open(CONVERTED_FILENAME, 'a') as f:
+        with open(default_file, 'r') as def_f:
+          for line in def_f:
+            f.write(line)
+      return
+    except:
+      print('./Defaults/service_obj.txt required but not found.')
+      return
+  
+  def set_override(self):
+    with open(CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(9)}override {{\n')
+      f.write(f'{self.tabs(10)}no;\n')
+      f.write(f'{self.tabs(9)}}}\n')
+
+  def create_service(self, name):
+    with open(CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(6)}{name} {{\n')
+      f.write(f'{self.tabs(7)}protocol {{\n')
+  
+  def close_service(self):
+    with open(CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(7)}}}\n')
+      f.write(f'{self.tabs(6)}}}\n')
+
+  def create_header(self):
+    with open(CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(5)}service {{\n')
+  
+  def close_header(self):
+    with open(CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(5)}}}\n')
 
 class ServiceGroup(Objects):
   def __init__(self):
     super().__init__(FILENAME=FILENAME, search_text=SEARCH_SERVICE_G)
-    pass
 
 
 
@@ -275,4 +356,5 @@ if __name__ == '__main__':
   NetworkObjects.convert_fqdn_objs()
   NetworkObjects.close_address_header()
   NetworkGroupObjects.convert_group_objs()
+  ServiceObjects.convert_service_objs()
   #testing ------BELOW---------
