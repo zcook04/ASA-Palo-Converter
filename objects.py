@@ -251,6 +251,7 @@ class NetworkGroup(Objects):
 class Service(Objects):
   def __init__(self):
     super().__init__(FILENAME=FILENAME, search_text=SEARCH_SERVICE_O)
+    self.created_service_ranges = set()
 
   def convert_service_objs(self):
     self.create_header()
@@ -258,9 +259,61 @@ class Service(Objects):
     for service in self.objects:
       service_attr = self.get_service_attributes(service)
       self.create_service(service_attr['name'])
+      self.open_protocol()
       self.set_protocol_attr(service_attr)
+      self.close_protocol()
+      self.set_description(service_attr['description'])
       self.close_service()
+    for group in ServiceGroupObjects.objects:
+      for line in group:
+        if ('tcp destination range' in line):
+          self.create_tcp_range(line)
+        elif('udp destination range' in line and type(re.search(r'destination\srange\s(\d*)\s(\d*)', line)) != type(None)):
+          self.create_udp_range(line)
+        elif ('tcp-udp destination range' in line):
+          self.create_tcp_range(line)
+          self.create_udp_range(line)
+        else:
+          continue
     self.close_header()
+
+  def create_tcp_range(self, line):
+    start_port = re.search(r'destination\srange\s(\d*)\s(\d*)', line).group(1)
+    end_port =  re.search(r'destination\srange\s(\d*)\s(\d*)', line).group(2)
+    port_range = f'tcp-range-{start_port}-{end_port}'
+    if(port_range not in self.created_service_ranges):
+      self.created_service_ranges.add(port_range)
+      with open(CONVERTED_FILENAME, 'a') as f:
+        f.write(f'{self.tabs(6)}{port_range} {{\n')
+        f.write(f'{self.tabs(7)}protocol {{\n')
+        f.write(f'{self.tabs(8)}tcp {{\n')
+        f.write(f'{self.tabs(9)}port {start_port}-{end_port};\n')
+      self.set_override()
+      with open(CONVERTED_FILENAME, 'a') as f:
+        f.write(f'{self.tabs(8)}}}\n')
+        f.write(f'{self.tabs(7)}}}\n')
+        f.write(f'{self.tabs(6)}}}\n')
+    else:
+      return
+
+  def create_udp_range(self, line):
+    start_port = re.search(r'destination\srange\s(\d*)\s(\d*)', line).group(1)
+    end_port =  re.search(r'destination\srange\s(\d*)\s(\d*)', line).group(2)
+    port_range = f'udp-range-{start_port}-{end_port}'
+    if(port_range not in self.created_service_ranges):
+      self.created_service_ranges.add(port_range)
+      with open(CONVERTED_FILENAME, 'a') as f:
+        f.write(f'{self.tabs(6)}{port_range} {{\n')
+        f.write(f'{self.tabs(7)}protocol {{\n')
+        f.write(f'{self.tabs(8)}tcp {{\n')
+        f.write(f'{self.tabs(9)}port {start_port}-{end_port};\n')
+      self.set_override()
+      with open(CONVERTED_FILENAME, 'a') as f:
+        f.write(f'{self.tabs(8)}}}\n')
+        f.write(f'{self.tabs(7)}}}\n')
+        f.write(f'{self.tabs(6)}}}\n')
+    else:
+      return
 
   def get_service_attributes(self, service):
     service_attr = {}
@@ -283,6 +336,10 @@ class Service(Objects):
       service_attr['source'] = re.search(r'source\s(eq\s)(\S*)', service_string).group(2)
     else:
       service_attr['source'] = False
+    if(type(re.search(r'\sdescription\s(.*)', service_string)) != type(None)):
+      service_attr['description'] = re.search(r'\sdescription\s(.*)', service_string).group(1)
+    else:
+      service_attr['description'] = False
     return service_attr
 
   def set_protocol_attr(self, attr):
@@ -296,6 +353,12 @@ class Service(Objects):
     with open(CONVERTED_FILENAME, 'a') as f:
       f.write(f'{self.tabs(8)}}}\n')
 
+  def set_description(self, description):
+    if(description):
+      with open(CONVERTED_FILENAME, 'a') as f:
+        f.write(f'{self.tabs(7)}description "{description}";\n')
+    return
+
   def append_defaults(self, default_file='./Defaults/service_obj.txt'):
     '''
     Appends service-object defaults (ie www https)to account for those objects referenced in ASA 
@@ -308,7 +371,7 @@ class Service(Objects):
             f.write(line)
       return
     except:
-      print('./Defaults/service_obj.txt required but not found.')
+      print('./Defaults/service_obj.txt not found.')
       return
   
   def set_override(self):
@@ -317,14 +380,20 @@ class Service(Objects):
       f.write(f'{self.tabs(10)}no;\n')
       f.write(f'{self.tabs(9)}}}\n')
 
+  def open_protocol(self):
+    with open(CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(7)}protocol {{\n')
+    
+  def close_protocol(self):
+    with open(CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(7)}}}\n')
+
   def create_service(self, name):
     with open(CONVERTED_FILENAME, 'a') as f:
       f.write(f'{self.tabs(6)}{name} {{\n')
-      f.write(f'{self.tabs(7)}protocol {{\n')
   
   def close_service(self):
     with open(CONVERTED_FILENAME, 'a') as f:
-      f.write(f'{self.tabs(7)}}}\n')
       f.write(f'{self.tabs(6)}}}\n')
 
   def create_header(self):
@@ -339,17 +408,132 @@ class ServiceGroup(Objects):
   def __init__(self):
     super().__init__(FILENAME=FILENAME, search_text=SEARCH_SERVICE_G)
 
+  def convert_service_groups(self):
+    self.create_header()
+    for group in self.objects:
+      if("DM_INLINE" not in ' '.join(group)):
+        group_attr = self.get_group_attr(group)
+        self.open_group_name(group_attr['name'])
+        self.add_members(group)
+        self.close_group_name()
+    self.close_header()
+
+  def get_group_attr(self, group):
+    g_string = ' '.join(group)
+    attr = {}
+    attr['name'] = re.search(r'object-group service (\S*)', g_string).group(1)
+    attr['description'] = self.get_description(group)
+    return attr
+
+  def get_description(self, group):
+    description = ''
+    for line in group:
+      if('description' in line):
+        description = re.search(r'\sdescription\s([\S ]*)',line).group(1)
+        return description
+    return False
+
+  def add_members(self, group):
+    members = self.get_members(group)
+    with open(CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(7)}members {members}\n')
+
+  def get_members(self, group):
+    members = []
+    for member in group:
+      if('service-object' in member):
+        if(self.get_service_object(member) != ''):
+          members.append(self.get_service_object(member))
+      # if('protocol-object' in member):
+      #   #members.append(member)
+      # if('port-object' in member):
+      #   #members.append(member)
+      # if('group-object' in member):
+      #   #members.append(member)
+    print(members)
+    return f"[ {' '.join(members)}];"
+
+  def get_service_object(self, member):
+    if('tcp ' in member):
+      return self.tcp_service_obj(member)
+    elif(' udp' in member):
+      return self.udp_service_obj(member)
+    elif('tcp-udp' in member):
+      return self.tcp_udp_service_obj(member)
+    elif('service-object object ' in member):
+      return re.search(r'service-object object\s([\dA-Za-z\-_]*)', member).group(1)
+    #ICMP
+    elif(type(re.search(r'(service-object\s)(icmp)\s?(\S*)?', member)) != type(None)):
+      return 'ICMP-obj'
+    #UNMATCHED SERVICE OBJECTS--NEEDS HANDLED
+    else:
+      return 'SERV_obj'
+
+  def tcp_service_obj(self, member):
+    if(type(re.search(r'service-object tcp\sdestination\seq\s(\d{1,5})', member)) != type(None)):
+      tcp_port = re.search(r'service-object tcp\sdestination\seq\s(\d{1,5})', member).group(1)
+      return f'tcp-{tcp_port}'
+    if(type(re.search(r'tcp destination\seq\s(\S*)', member)) != type(None)):
+      if('sip' in member):
+        return 'sip_tcp'
+      elif('domain' in member):
+        return 'domain_tcp'
+      elif('www' in member):
+        return 'www_tcp'
+      else:
+        tcp_port = (re.search(r'tcp destination\seq\s(\S*)', member).group(1))
+        return tcp_port
+    if(type(re.search(r'tcp\sdestination\srange\s(\d*)\s(\d*)', member)) != type(None)):
+      tcp_start = re.search(r'tcp\sdestination\srange\s(\d*)\s(\d*)', member).group(1)
+      tcp_end = re.search(r'tcp\sdestination\srange\s(\d*)\s(\d*)', member).group(2)
+      tcp_range = f'{tcp_start}-{tcp_end}'
+      return f'tcp-range-{tcp_range}'
+
+  def udp_service_obj(self, member):
+    if(type(re.search(r'udp\sdestination\seq\s(\d{1,5})', member)) != type(None)):
+      udp_port = (re.search(r'udp\sdestination\seq\s(\d{1,5})', member).group(1))
+      return f'udp-{udp_port}'
+    elif(type(re.search(r'service-object object (\S*)', member)) != type(None)):
+      udp_port = re.search(r'service-object object (\S*)', member).group(1)
+      return udp_port
+    else:
+      return ''
+
+  def tcp_udp_service_obj(self, member):
+    if('destination range' in member):
+      tcp_udp_start = re.search(r'destination\srange\s(\d*)\s(\d*)', member).group(1)
+      tcp_udp_end = re.search(r'destination\srange\s(\d*)\s(\d*)', member).group(2)
+      return f'tcp-range-{tcp_udp_start}-{tcp_udp_end} udp-range-{tcp_udp_start}-{tcp_udp_end}'
+    else:
+      return ''
+
+  def open_group_name(self, name):
+    with open(CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(6)}{name} {{\n')
+
+  def close_group_name(self):
+    with open(CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(6)}}}\n')
+
+  def create_header(self):
+    with open(CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(5)}service-group {{\n')
+
+  def close_header(self):
+    with open(CONVERTED_FILENAME, 'a') as f:
+      f.write(f'{self.tabs(5)}}}\n')
+
 
 
 
 if __name__ == '__main__':
-
-
+  #Create Configuration Objects as Python Objects
   NetworkObjects = Network()
   NetworkGroupObjects = NetworkGroup()
   ServiceObjects = Service()
   ServiceGroupObjects = ServiceGroup()
 
+  #Run Object Conversion Functions
   NetworkObjects.create_address_header()
   NetworkObjects.convert_host_objs()
   NetworkObjects.convert_subnet_objs()
@@ -358,3 +542,4 @@ if __name__ == '__main__':
   NetworkGroupObjects.convert_group_objs()
   ServiceObjects.convert_service_objs()
   #testing ------BELOW---------
+  ServiceGroupObjects.convert_service_groups()
